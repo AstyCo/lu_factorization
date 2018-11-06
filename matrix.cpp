@@ -28,6 +28,7 @@ Matrix::Matrix(const Matrix &m)
 const Matrix &Matrix::operator=(const Matrix &m)
 {
     copy(m);
+    return *this;
 }
 
 alglib::real_2d_array Matrix::alglibArray() const

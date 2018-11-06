@@ -2,7 +2,7 @@ CC=g++
 CFLAGS=-c -Wall -O2
 INC=/polusfs/soft/magma-2.4.0_open_blas/include /polusfs/soft/PGI/linuxpower/2018/cuda/9.1/include
 INC_PARAMS=$(foreach d, $(INC), -I$d)
-LDFLAGS=-L /polusfs/soft/magma-2.4.0_open_blas/lib -lmagma -L /polusfs/soft/PGI/linuxpower/2018/cuda/9.1/lib64 -lcublas -L /polusfs/soft/openblas-0.3.4/lib -lopenblas
+LDFLAGS=-L /polusfs/soft/magma-2.4.0_open_blas/lib -lmagma -L /polusfs/soft/PGI/linuxpower/2018/cuda/9.1/lib64 -lcudart -lcublas -L /polusfs/soft/openblas-0.3.4/lib -lopenblas
 SOURCES=main.cpp utils.cpp matrix.cpp test_lu_factorization.cpp $(wildcard alglib/*.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=t1

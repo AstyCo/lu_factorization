@@ -4,9 +4,12 @@
 #include "magma_s.h" // magma_sgetrf_m
 #include "magma_auxiliary.h" // magma_init, magma_finalize, magma_wtime
 
+#include "cuda_runtime_api.h" // cudaGetDeviceCount
+
 #include <list>
 
 #include <ctime>
+#include <unistd.h> // sysconf
 
 struct CommandLineArgs
 {
@@ -34,8 +37,7 @@ static ListUint matrix_sizes()
 
 static void eval_on_size(uint N)
 {
-    double s_wc = magma_wtime();
-    const magma_int_t ngpu = 2;
+    const magma_int_t ngpu = 1;
     const magma_int_t m = N;
     const magma_int_t n = N;
     const magma_int_t lda = m;
@@ -44,38 +46,34 @@ static void eval_on_size(uint N)
 
     Matrix matrix_N_x_N(N);
     matrix_N_x_N.rndNondegenirate();
-//    matrix_N_x_N.print("Random matrix");
 
-    Matrix matrix = matrix_N_x_N;
-    matrix.transpose();
+    for (int iter = 0; iter < 10; ++iter) {
+        Matrix matrix = matrix_N_x_N;
+        matrix.transpose();
 
-    double begin_wc = magma_wtime();
+        Profiler prf;
+        prf.start();
+        magma_int_t magma_retcode = magma_sgetrf_m(ngpu,
+                                                   m,
+                                                   n,
+                                                   matrix.array(),
+                                                   lda,
+                                                   ipiv,
+                                                   &info);
+        prf.finish();
+        MY_ASSERT(magma_retcode == 0);
+        std::cout << N << ":" << std::endl;
+        prf.print();
 
-    magma_int_t magma_retcode = magma_sgetrf_m(ngpu,
-                                               m,
-                                               n,
-                                               matrix.array(),
-                                               lda,
-                                               ipiv,
-                                               &info);
-    MY_ASSERT(magma_retcode == 0);
-    double end_wc = magma_wtime();
+        Matrix L;
+        L.setDataL(matrix.array(), N);
 
-    Matrix L;
-    L.setDataL(matrix.array(), N);
-//    L.print("L-matrix");
+        Matrix U;
+        U.setDataU(matrix.array(), N);
 
-    Matrix U;
-    U.setDataU(matrix.array(), N);
-//    U.print("U-matrix");
-
-    if (cmd_args.test)
-        do_test_lu_factorization(L, U, ipiv, matrix_N_x_N);
-
-    std::cout << N << ": LU-factorization time"
-              << " : " << end_wc - begin_wc << "s. "
-              << '[' << magma_wtime() - s_wc << "s.]"
-              << std::endl;
+        if (cmd_args.test)
+            do_test_lu_factorization(L, U, ipiv, matrix_N_x_N);
+    }
 }
 
 
@@ -84,8 +82,15 @@ int main(int argc, char *argv[])
     if (argc > 1) {
         cmd_args.test = !strcmp(argv[1], "test");
     }
+    int num_cpu = sysconf(_SC_NPROCESSORS_ONLN);
+    int dev_count;
+    cudaGetDeviceCount(&dev_count);
     std::cout << "TESTING " << (cmd_args.test ? "ENABLED" : "DISABLED")
-              << std::endl;
+                << std::endl
+              << "num_cpu " << num_cpu
+                << std::endl
+              << "dev_count " << dev_count
+                << std::endl;
 
     MY_ASSERT(magma_init() == MAGMA_SUCCESS);
     initialize_seed();
