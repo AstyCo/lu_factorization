@@ -14,11 +14,13 @@
 struct CommandLineArgs
 {
     bool test;
+    int ngpu;
 
     CommandLineArgs()
     {
         // default
         test = false;
+        ngpu = 1;
     }
 } cmd_args;
 
@@ -37,7 +39,6 @@ static ListUint matrix_sizes()
 
 static void eval_on_size(uint N)
 {
-    const magma_int_t ngpu = 1;
     const magma_int_t m = N;
     const magma_int_t n = N;
     const magma_int_t lda = m;
@@ -49,11 +50,12 @@ static void eval_on_size(uint N)
 
     for (int iter = 0; iter < 10; ++iter) {
         Matrix matrix = matrix_N_x_N;
-        matrix.transpose();
+        if (cmd_args.test)
+            matrix.transpose();
 
         Profiler prf;
         prf.start();
-        magma_int_t magma_retcode = magma_sgetrf_m(ngpu,
+        magma_int_t magma_retcode = magma_sgetrf_m(cmd_args.ngpu,
                                                    m,
                                                    n,
                                                    matrix.array(),
@@ -81,6 +83,14 @@ int main(int argc, char *argv[])
 {
     if (argc > 1) {
         cmd_args.test = !strcmp(argv[1], "test");
+        std::cout << "arg test " << cmd_args.test << std::endl;
+
+    }
+    if (argc > 2) {
+        int tmp = strtol(argv[2], NULL, 10);
+        if (tmp >= 1 && tmp <= 2)
+            cmd_args.ngpu = tmp;
+        std::cout << "arg ngpu " << cmd_args.ngpu << std::endl;
     }
     int num_cpu = sysconf(_SC_NPROCESSORS_ONLN);
     int dev_count;
