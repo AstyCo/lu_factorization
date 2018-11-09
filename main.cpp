@@ -28,11 +28,7 @@ typedef std::list<uint> ListUint;
 static ListUint matrix_sizes()
 {
     ListUint sizes;
-    for (uint i = 1000; i <1010; ++i)
-        sizes.push_back(i);
-    for (uint i = 200; i <210; ++i)
-        sizes.push_back(i);
-    for (uint i = 2000; i <2005; ++i)
+    for (uint i = 4000; i <10000; i *= 1.2)
         sizes.push_back(i);
     return sizes;
 }
@@ -48,7 +44,10 @@ static void eval_on_size(uint N)
     Matrix matrix_N_x_N(N);
     matrix_N_x_N.rndNondegenirate();
 
+    cmd_args.ngpu = 1;
     for (int iter = 0; iter < 10; ++iter) {
+        if (iter > 4)
+            cmd_args.ngpu = 2;
         Matrix matrix = matrix_N_x_N;
         if (cmd_args.test)
             matrix.transpose();

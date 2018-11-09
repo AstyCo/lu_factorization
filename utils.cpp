@@ -1,6 +1,8 @@
 #include "utils.h"
 
 #include "cuda_runtime_api.h" // cudaEvent_t, cudaError_t, cudaGetErrorString
+#include "magma_auxiliary.h" // magma_wtime
+
 
 #include <iostream>
 #include <limits>
@@ -44,7 +46,9 @@ class ProfilerPrivate
 {
 public:
     ProfilerPrivate(Profiler::Options opts)
-        : _started(false), _cpu_elapsed(0), _gpu_elapsed_ms(0), _opts(opts)
+        : _started(false),
+          _wall_clock_elapsed(0), _cpu_elapsed(0),
+          _gpu_elapsed_ms(0), _opts(opts)
     {
 
     }
@@ -65,6 +69,7 @@ public:
         _started = true;
 
         _cpu_start = clock();
+        _wstart = magma_wtime();
 
         HANDLE_ERROR(cudaEventCreate(&_cudaStart));
         HANDLE_ERROR(cudaEventCreate(&_cudaStop));
@@ -85,6 +90,7 @@ public:
         MY_ASSERT(_started);
 
         _cpu_elapsed = (clock() - _cpu_start) / CLOCKS_PER_SEC;
+        _wall_clock_elapsed = magma_wtime() - _wstart;
 
         HANDLE_ERROR(cudaEventRecord(_cudaStop, 0));
         HANDLE_ERROR(cudaEventSynchronize (_cudaStop) );
@@ -98,8 +104,8 @@ public:
     {
         char buff[256];
         snprintf(buff, sizeof(buff),
-                 "Elapsed CPU: %f s.  GPU: %f s.\n",
-                 _cpu_elapsed, _gpu_elapsed_ms / 1000);
+                 "Elapsed CPU: %f s.  GPU: %f s. WC: %f s.\n",
+                 _cpu_elapsed, _gpu_elapsed_ms / 1000, _wall_clock_elapsed);
 
         std::cout << buff << std::endl;
     }
@@ -112,10 +118,12 @@ public:
 private:
     bool _started;
 
+    double _wstart;
     double _cpu_start;
     cudaEvent_t _cudaStart;
     cudaEvent_t _cudaStop;
 
+    float _wall_clock_elapsed;
     float _cpu_elapsed;
     float _gpu_elapsed_ms;
 
