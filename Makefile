@@ -6,7 +6,7 @@ LDFLAGS=-L /polusfs/soft/magma-2.4.0_open_blas/lib -lmagma -L /polusfs/soft/PGI/
 SOURCES=main.cpp utils.cpp matrix.cpp test_lu_factorization.cpp $(wildcard alglib/*.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=t1
-ARGUMENTS=no 2
+ARGUMENTS=msize=10000 niter=10 ngpu=2
 
 all: $(SOURCES) $(EXECUTABLE)
 	
@@ -14,8 +14,8 @@ clean:
 	rm -rf *.o
 	
 submit:
-	mpisubmit.pl -n 2 -w 00:15 --gpu $(EXECUTABLE) $(ARGUMENTS)
-
+	mpisubmit.pl -n 1 -w 00:15 --gpu $(EXECUTABLE) $(ARGUMENTS)
+    
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
 

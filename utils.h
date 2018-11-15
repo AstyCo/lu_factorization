@@ -47,7 +47,7 @@ struct CommandLineArgs
         // default
         test = false;
         ngpu = 1;
-        matrix_size = 1000;
+        matrix_size = -1;
         iter_count = 10;
         one_gpu_iter_count = iter_count / 2;
     }

@@ -30,12 +30,17 @@ static void eval_on_size(uint N)
     magma_int_t ipiv[N];
     magma_int_t info;
 
+    float start = magma_wtime();
+    Profiler prfMatrixGen;
+    prfMatrixGen.start();
     Matrix matrix_N_x_N(N);
     matrix_N_x_N.rndNondegenirate();
+    prfMatrixGen.finish();
+    std::cout << "matrixGen:" << std::endl;
+    prfMatrixGen.print();
 
     cmd_args.ngpu = 1;
     
-    float start = magma_wtime();
     for (int iter = 0; iter < cmd_args.iter_count; ++iter) {
         if (iter >= cmd_args.one_gpu_iter_count)
             cmd_args.ngpu = 2;
@@ -56,8 +61,8 @@ static void eval_on_size(uint N)
         MY_ASSERT(magma_retcode == 0);
         std::cout << N << ":" << std::endl;
         prf.print();
-        std::cout << "PERF: " << static_cast<double>(N) * N * N / (static_cast<double>(100000000) * prf.time())
-                  << std::endl;
+//        std::cout << "PERF: " << static_cast<double>(N) * N * N / (static_cast<double>(100000000) * prf.time())
+//                  << std::endl;
 
         Matrix L;
         L.setDataL(matrix.array(), N);

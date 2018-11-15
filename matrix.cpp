@@ -45,9 +45,19 @@ alglib::real_2d_array Matrix::alglibArray() const
 
 void Matrix::rndNondegenirate()
 {
-    alglib::real_2d_array a;
-    alglib::rmatrixrndcond(_n, _conditionNumber, a, alglib::parallel);
-    setAlglibArray(a);
+    alglib::hqrndstate state;
+
+    // initialize
+    alglib::hqrndrandomize(state);
+    alglib::ae_int_t seed1 = time(0);
+
+    // generate N*N random values
+    for (uint i = 0; i < size(); ++i) {
+        alglib::hqrndseed(seed1, i,
+                          state); // install seed
+        // get the value
+        _data[i] = alglib::hqrnduniformr(state);
+    }
 }
 
 void Matrix::transpose()
