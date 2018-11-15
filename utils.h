@@ -34,4 +34,26 @@ private:
     ProfilerPrivate *_impl;
 };
 
+struct CommandLineArgs
+{
+    bool test;
+    uint ngpu;
+    int matrix_size;
+    int iter_count;
+    int one_gpu_iter_count;
+
+    CommandLineArgs()
+    {
+        // default
+        test = false;
+        ngpu = 1;
+        matrix_size = 1000;
+        iter_count = 10;
+        one_gpu_iter_count = iter_count / 2;
+    }
+
+    void parse(int argc, char *argv[]);
+    void parseArg(char arg[]);
+};
+
 #endif // UTILS_H

@@ -33,17 +33,10 @@ void do_test_lu_factorization(const Matrix &L, const Matrix &U,
     uint N = L.N();
     Matrix P;
     VecUint permutations = getPermutations(ipiv, N);
-//    for (int i = 0; i < N; ++ i)
-//        std::cout << permutations[i] << ',';
-//    std::cout << std::endl;
 
     P.setPermutations(permutations.data(), N);
-//    P.print("Permutations");
     Matrix LU = L * U;
-//    LU.print("LU");
     Matrix PLU = P * LU;
-//    M.print("M");
-//    PLU.print("PLU");
 
     const ValueType *array_PLU = PLU.array();
     const ValueType *array_M = M.array();

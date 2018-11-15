@@ -69,7 +69,7 @@ public:
         _started = true;
 
         _cpu_start = clock();
-        _wstart = magma_wtime();
+        _wstart = magma_sync_wtime ( NULL );
 
         HANDLE_ERROR(cudaEventCreate(&_cudaStart));
         HANDLE_ERROR(cudaEventCreate(&_cudaStop));
@@ -90,7 +90,7 @@ public:
         MY_ASSERT(_started);
 
         _cpu_elapsed = (clock() - _cpu_start) / CLOCKS_PER_SEC;
-        _wall_clock_elapsed = magma_wtime() - _wstart;
+        _wall_clock_elapsed = magma_sync_wtime ( NULL ) - _wstart;
 
         HANDLE_ERROR(cudaEventRecord(_cudaStop, 0));
         HANDLE_ERROR(cudaEventSynchronize (_cudaStop) );
@@ -112,7 +112,7 @@ public:
 
     double time() const
     {
-        return _gpu_elapsed_ms/* - _cpu_elapsed*/;
+        return _wall_clock_elapsed;
     }
 
 private:
@@ -154,4 +154,44 @@ double Profiler::time() const
 void Profiler::print() const
 {
     _impl->print();
+}
+
+void CommandLineArgs::parse(int argc, char *argv[])
+{
+    for (int i = 1; i < argc; ++i)
+        parseArg(argv[i]);
+}
+
+void CommandLineArgs::parseArg(char arg[])
+{
+    const char s_test [] = "test";
+    const char s_ngpu [] = "ngpu=";
+    const char s_msize[] = "msize=";
+    const char s_niter[] = "niter=";
+
+    std::string sarg(arg);
+    if (sarg == s_test) {
+        test = true;
+        return;
+    }
+    if (sarg.find(s_ngpu) != std::string::npos) {
+        long tmp = strtol(sarg.c_str() + sizeof(s_ngpu) - 1,
+                         NULL, 10);
+        if (tmp >= 1 && tmp <= 2)
+            ngpu = tmp;
+        return;
+    }
+    if (sarg.find(s_msize) != std::string::npos) {
+        long tmp = strtol(sarg.c_str() + sizeof(s_msize) - 1,
+                         NULL, 10);
+        matrix_size = tmp;
+        return;
+    }
+    if (sarg.find(s_niter) != std::string::npos) {
+        long tmp = strtol(sarg.c_str() + sizeof(s_niter) - 1,
+                         NULL, 10);
+        iter_count = tmp;
+        return;
+    }
+    std::cout << "unrecognized argument " << sarg << std::endl;
 }

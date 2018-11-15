@@ -11,24 +11,13 @@
 #include <ctime>
 #include <unistd.h> // sysconf
 
-struct CommandLineArgs
-{
-    bool test;
-    int ngpu;
-
-    CommandLineArgs()
-    {
-        // default
-        test = false;
-        ngpu = 1;
-    }
-} cmd_args;
+CommandLineArgs cmd_args;
 
 typedef std::list<uint> ListUint;
 static ListUint matrix_sizes()
 {
     ListUint sizes;
-    for (uint i = 4000; i <10000; i *= 1.2)
+    for (uint i = 200; i <12000; i *= 1.2)
         sizes.push_back(i);
     return sizes;
 }
@@ -45,8 +34,10 @@ static void eval_on_size(uint N)
     matrix_N_x_N.rndNondegenirate();
 
     cmd_args.ngpu = 1;
-    for (int iter = 0; iter < 10; ++iter) {
-        if (iter > 4)
+    
+    float start = magma_wtime();
+    for (int iter = 0; iter < cmd_args.iter_count; ++iter) {
+        if (iter >= cmd_args.one_gpu_iter_count)
             cmd_args.ngpu = 2;
         Matrix matrix = matrix_N_x_N;
         if (cmd_args.test)
@@ -65,6 +56,8 @@ static void eval_on_size(uint N)
         MY_ASSERT(magma_retcode == 0);
         std::cout << N << ":" << std::endl;
         prf.print();
+        std::cout << "PERF: " << static_cast<double>(N) * N * N / (static_cast<double>(100000000) * prf.time())
+                  << std::endl;
 
         Matrix L;
         L.setDataL(matrix.array(), N);
@@ -75,22 +68,19 @@ static void eval_on_size(uint N)
         if (cmd_args.test)
             do_test_lu_factorization(L, U, ipiv, matrix_N_x_N);
     }
+    float total = magma_wtime() - start;
+    std::cout << "TOTAL: " << total << " s." << std::endl;
 }
-
 
 int main(int argc, char *argv[])
 {
-    if (argc > 1) {
-        cmd_args.test = !strcmp(argv[1], "test");
-        std::cout << "arg test " << cmd_args.test << std::endl;
+    cmd_args.parse(argc, argv);
 
-    }
-    if (argc > 2) {
-        int tmp = strtol(argv[2], NULL, 10);
-        if (tmp >= 1 && tmp <= 2)
-            cmd_args.ngpu = tmp;
-        std::cout << "arg ngpu " << cmd_args.ngpu << std::endl;
-    }
+    std::cout << "arg test " << cmd_args.test << std::endl;
+    std::cout << "arg ngpu " << cmd_args.ngpu << std::endl;
+    std::cout << "arg matrix_size " << cmd_args.matrix_size << std::endl;
+    std::cout << "arg iter_count " << cmd_args.iter_count << std::endl;
+
     int num_cpu = sysconf(_SC_NPROCESSORS_ONLN);
     int dev_count;
     cudaGetDeviceCount(&dev_count);
@@ -102,14 +92,19 @@ int main(int argc, char *argv[])
                 << std::endl;
 
     MY_ASSERT(magma_init() == MAGMA_SUCCESS);
-    initialize_seed();
-    ListUint msizes = matrix_sizes();
 
-    for (ListUint::const_iterator it = msizes.begin();
-         it != msizes.end();
-         ++it)
-    {
-        eval_on_size(*it);
+    initialize_seed();
+
+    if (cmd_args.matrix_size > 0) {
+        eval_on_size(cmd_args.matrix_size);
+    }
+    else {
+        ListUint msizes = matrix_sizes();
+        for (ListUint::const_iterator it = msizes.begin();
+             it != msizes.end();
+             ++it) {
+            eval_on_size(*it);
+        }
     }
 
     magma_finalize();

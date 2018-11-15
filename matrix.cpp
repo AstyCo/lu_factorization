@@ -5,7 +5,7 @@
 
 double Matrix::_minEugenvalue = 0.3;
 double Matrix::_maxEugenvalue = 999.9;
-double Matrix::_conditionNumber = 1.0001;
+double Matrix::_conditionNumber = 100.0001;
 
 
 Matrix::Matrix(uint n)
@@ -43,32 +43,10 @@ alglib::real_2d_array Matrix::alglibArray() const
     return r;
 }
 
-//void Matrix::identity()
-//{
-//    MY_ASSERT(_n == _n);
-//    for (int i = 0; i < _n; ++i) {
-//        for (int j = 0; j < _n; ++j) {
-//            _data[i * _n + j] = 0;
-//        }
-//    }
-//    for (int i = 0; i < _n; ++i) {
-//        _data[i * _n + i] = 1;
-//    }
-//}
-
-//void Matrix::rndDiag()
-//{
-//    identity();
-//    for (int i = 0; i < _n; ++i) {
-//        double eugenValue = randomize(_minEugenvalue, _maxEugenvalue);
-//        _data[i * _n + i] = eugenValue;
-//    }
-//}
-
 void Matrix::rndNondegenirate()
 {
     alglib::real_2d_array a;
-    alglib::rmatrixrndcond(_n, _conditionNumber, a);
+    alglib::rmatrixrndcond(_n, _conditionNumber, a, alglib::parallel);
     setAlglibArray(a);
 }
 
