@@ -7,6 +7,8 @@
 #include "cuda_runtime_api.h" // cudaGetDeviceCount
 
 #include <list>
+#include <iostream>
+#include <fstream>
 
 #include <ctime>
 #include <unistd.h> // sysconf
@@ -14,13 +16,49 @@
 CommandLineArgs cmd_args;
 
 typedef std::list<uint> ListUint;
+
+bool two_gpu_available;
+
+std::string fname = "last_size.txt";
+
+#include <dirent.h>
+
+const char env_last_size[] = "LAST_SIZE";
+static void write_value(uint N)
+{
+    std::ofstream myfile;
+    myfile.open (fname.c_str(), std::ofstream::out | std::ofstream::trunc);
+    if (!myfile.is_open()) {
+        std::cout << "CAN'T OPEN out FILE " << fname << std::endl;
+        exit(0);
+    }
+    myfile << N << std::endl;
+    myfile.close();
+}
+
+static uint read_value()
+{
+    std::ifstream myfile;
+    myfile.open (fname.c_str(), std::ifstream::in);
+    if (!myfile.is_open()) {
+        std::cout << "CAN'T OPEN in FILE " << fname << std::endl;
+        exit(0);
+    }
+    char buff[64];
+    myfile.getline(buff, sizeof(buff));
+    long tmp = strtol(buff, NULL, 10);
+    return tmp;
+}
+
 static ListUint matrix_sizes()
 {
     ListUint sizes;
-    for (uint i = 200; i <12000; i *= 1.2)
+    uint last_size = read_value() + 1;
+    for (uint i = last_size; i <50000; i += 256)
         sizes.push_back(i);
     return sizes;
 }
+
 
 static void eval_on_size(uint N)
 {
@@ -30,55 +68,69 @@ static void eval_on_size(uint N)
     magma_int_t ipiv[N];
     magma_int_t info;
 
-    float start = magma_wtime();
-    Profiler prfMatrixGen;
-    prfMatrixGen.start();
-    Matrix matrix_N_x_N(N);
-    matrix_N_x_N.rndNondegenirate();
-    prfMatrixGen.finish();
-    std::cout << "matrixGen:" << std::endl;
-    prfMatrixGen.print();
-
     cmd_args.ngpu = 1;
-    
-    for (int iter = 0; iter < cmd_args.iter_count; ++iter) {
-        if (iter >= cmd_args.one_gpu_iter_count)
-            cmd_args.ngpu = 2;
-        Matrix matrix = matrix_N_x_N;
-        if (cmd_args.test)
-            matrix.transpose();
+    write_value(N);
 
-        Profiler prf;
-        prf.start();
-        magma_int_t magma_retcode = magma_sgetrf_m(cmd_args.ngpu,
-                                                   m,
-                                                   n,
-                                                   matrix.array(),
-                                                   lda,
-                                                   ipiv,
-                                                   &info);
-        prf.finish();
-        MY_ASSERT(magma_retcode == 0);
-        std::cout << N << ":" << std::endl;
-        prf.print();
-//        std::cout << "PERF: " << static_cast<double>(N) * N * N / (static_cast<double>(100000000) * prf.time())
-//                  << std::endl;
+    for (Matrix matrix_N_x_N(N);;) {
+        bool no_error_flag = true;
 
-        Matrix L;
-        L.setDataL(matrix.array(), N);
+        matrix_N_x_N.rndNondegenirate();
 
-        Matrix U;
-        U.setDataU(matrix.array(), N);
+        for (int iter = 0; iter < cmd_args.iter_count; ++iter) {
+            if (iter >= cmd_args.one_gpu_iter_count) {
+//                if (!two_gpu_available)
+//                    break;
+                cmd_args.ngpu = 2;
+            }
+            Matrix matrix = matrix_N_x_N;
+            if (cmd_args.test)
+                matrix.transpose();
 
-        if (cmd_args.test)
-            do_test_lu_factorization(L, U, ipiv, matrix_N_x_N);
+            Profiler prf;
+            prf.start();
+            magma_int_t magma_retcode = magma_sgetrf_m(cmd_args.ngpu,
+                                                       m,
+                                                       n,
+                                                       matrix.array(),
+                                                       lda,
+                                                       ipiv,
+                                                       &info);
+            if (magma_retcode != 0) {
+                no_error_flag = false;
+                break;
+            }
+            prf.finish();
+
+            char out_str[512];
+            snprintf(out_str, sizeof(out_str),
+                     "###,%u,%u,%lf", matrix.N(), cmd_args.ngpu, prf.time());
+
+            std::cout << out_str << std::endl;
+
+            Matrix L;
+            L.setDataL(matrix.array(), N);
+
+            Matrix U;
+            U.setDataU(matrix.array(), N);
+
+            if (cmd_args.test)
+                do_test_lu_factorization(L, U, ipiv, matrix_N_x_N);
+        }
+        if (no_error_flag)
+            break;
     }
-    float total = magma_wtime() - start;
-    std::cout << "TOTAL: " << total << " s." << std::endl;
 }
+
 
 int main(int argc, char *argv[])
 {
+    char fname[512];
+    snprintf(fname, sizeof(fname),"outs/OUT_%lld_%d",
+             static_cast<long long>(time(0)),
+             cmd_args.matrix_size + cmd_args.ngpu);
+    std::ofstream out(fname);
+    std::cout.rdbuf(out.rdbuf()); //redirect std::cout
+
     cmd_args.parse(argc, argv);
 
     std::cout << "arg test " << cmd_args.test << std::endl;
@@ -89,14 +141,51 @@ int main(int argc, char *argv[])
     int num_cpu = sysconf(_SC_NPROCESSORS_ONLN);
     int dev_count;
     cudaGetDeviceCount(&dev_count);
-    std::cout << "TESTING " << (cmd_args.test ? "ENABLED" : "DISABLED")
-                << std::endl
-              << "num_cpu " << num_cpu
-                << std::endl
-              << "dev_count " << dev_count
-                << std::endl;
+    two_gpu_available = (dev_count > 1);
 
     MY_ASSERT(magma_init() == MAGMA_SUCCESS);
+    std::cout << "TESTING " << (cmd_args.test ? "ENABLED" : "DISABLED")
+              << std::endl
+              << "num_cpu " << num_cpu << std::endl
+              << "dev_count " << dev_count << std::endl
+              << "magma_num_gpus " << magma_num_gpus() << std::endl;
+    cudaGetDeviceCount(&dev_count);
+//    std::cout << "float size" << sizeof(float) << std::endl;
+//    for (int i = 0; i < dev_count; i++) {
+//        cudaDeviceProp prop;
+//        cudaGetDeviceProperties(&prop, i);
+//        printf("Device Number: %d\n", i);
+//        printf("  Device name: %s\n", prop.name);
+//        printf("  Memory Clock Rate (KHz): %d\n",
+//               prop.memoryClockRate);
+//        printf("  Memory Bus Width (bits): %d\n",
+//               prop.memoryBusWidth);
+//        printf("  Peak Memory Bandwidth (GB/s): %f\n",
+//               2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6);
+//        printf("  sharedMemPerBlock (bytes): %lu\n",
+//               prop.sharedMemPerBlock);
+//        printf("  totalGlobalMem (bytes): %lu\n",
+//               prop.totalGlobalMem);
+//        printf("  l2CacheSize (bytes): %d\n",
+//               prop.l2CacheSize);
+//        printf("  maxThreadsPerBlock: %d\n",
+//               prop.maxThreadsPerBlock);
+//        printf("  maxThreadsDim: %d %d %d\n",
+//               prop.maxThreadsDim[0], prop.maxThreadsDim[1],
+//               prop.maxThreadsDim[2]);
+//        printf("  sharedMemPerMultiprocessor (bytes): %lu\n",
+//               prop.sharedMemPerMultiprocessor);
+//        printf("  regsPerMultiprocessor (32-bit): %d\n",
+//               prop.regsPerMultiprocessor);
+//        printf("  maxGridSize: %d %d %d\n",
+//               prop.maxGridSize[0], prop.maxGridSize[1],
+//               prop.maxGridSize[2]);
+
+
+//        printf("\n");
+//    }
+//    return 0;
+
 
     initialize_seed();
 

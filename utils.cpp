@@ -104,7 +104,7 @@ public:
     {
         char buff[256];
         snprintf(buff, sizeof(buff),
-                 "Elapsed CPU: %f s.  GPU: %f s. WC: %f s.\n",
+                 "Elapsed CPU: %f s.  GPU: %f s. WC: %lf s.\n",
                  _cpu_elapsed, _gpu_elapsed_ms / 1000, _wall_clock_elapsed);
 
         std::cout << buff << std::endl;
@@ -123,7 +123,7 @@ private:
     cudaEvent_t _cudaStart;
     cudaEvent_t _cudaStop;
 
-    float _wall_clock_elapsed;
+    double _wall_clock_elapsed;
     float _cpu_elapsed;
     float _gpu_elapsed_ms;
 
