@@ -53,8 +53,8 @@ static uint read_value()
 static ListUint matrix_sizes()
 {
     ListUint sizes;
-    uint last_size = read_value() + 1;
-    for (uint i = last_size; i <50000; i += 256)
+    uint last_size = read_value();
+    for (uint i = last_size; i <40000; i *= 1.2)
         sizes.push_back(i);
     return sizes;
 }
@@ -69,6 +69,7 @@ static void eval_on_size(uint N)
     magma_int_t info;
 
     cmd_args.ngpu = 1;
+    Matrix::pinned_allocation = 0;
     write_value(N);
 
     for (Matrix matrix_N_x_N(N);;) {
@@ -77,10 +78,8 @@ static void eval_on_size(uint N)
         matrix_N_x_N.rndNondegenirate();
 
         for (int iter = 0; iter < cmd_args.iter_count; ++iter) {
-            if (iter >= cmd_args.one_gpu_iter_count) {
-//                if (!two_gpu_available)
-//                    break;
-                cmd_args.ngpu = 2;
+            if (iter >= cmd_args.pinned_iter_count) {
+                Matrix::pinned_allocation = 1;
             }
             Matrix matrix = matrix_N_x_N;
             if (cmd_args.test)
@@ -103,7 +102,9 @@ static void eval_on_size(uint N)
 
             char out_str[512];
             snprintf(out_str, sizeof(out_str),
-                     "###,%u,%u,%lf", matrix.N(), cmd_args.ngpu, prf.time());
+                     "###,%u,%u,%d,%lf",
+                     matrix.N(), cmd_args.ngpu,
+                     Matrix::pinned_allocation, prf.time());
 
             std::cout << out_str << std::endl;
 

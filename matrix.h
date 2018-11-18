@@ -46,6 +46,8 @@ public:
     void print(const std::string &extra = std::string()) const;
     void printRow(uint i) const;
     //
+
+    static int pinned_allocation;
 private:
     void clear(); // очистка памяти
     void allocate(uint n); // выделение памяти

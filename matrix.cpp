@@ -1,12 +1,14 @@
 #include "matrix.h"
 
+#include "magma_auxiliary.h"
+
 #include <cstring> // memset
 #include <ctime> // time
 
 double Matrix::_minEugenvalue = 0.3;
 double Matrix::_maxEugenvalue = 999.9;
 double Matrix::_conditionNumber = 100.0001;
-
+int Matrix::pinned_allocation = 0;
 
 Matrix::Matrix(uint n)
     : _n(0), _data(NULL)
@@ -187,8 +189,17 @@ void Matrix::allocate(uint n)
     _n = n;
     if (n == 0)
         _data = NULL;
-    else
-        _data = new ValueType[size()];
+    else {
+        if (pinned_allocation) {
+            if (magma_smalloc_pinned(&_data, size()) != MAGMA_SUCCESS) {
+                std::cout << "ERROR magma_smalloc_pinned " << size() << std::endl;
+                exit(0);
+            }
+        }
+        else {
+            _data = new ValueType[size()];
+        }
+    }
 }
 
 void Matrix::zero()

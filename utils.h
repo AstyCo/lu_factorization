@@ -41,6 +41,7 @@ struct CommandLineArgs
     int matrix_size;
     int iter_count;
     int one_gpu_iter_count;
+    int pinned_iter_count;
     long long nrun;
 
     CommandLineArgs()
@@ -49,8 +50,9 @@ struct CommandLineArgs
         test = false;
         ngpu = 1;
         matrix_size = -1;
-        iter_count = 20;
-        one_gpu_iter_count = iter_count / 2;
+        iter_count = 6;
+        pinned_iter_count = iter_count / 2;
+        one_gpu_iter_count = iter_count /*/ 2*/;
         nrun = static_cast<long long>(-1);
     }
 
