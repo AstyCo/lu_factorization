@@ -11,7 +11,7 @@ double Matrix::_conditionNumber = 100.0001;
 int Matrix::pinned_allocation = 0;
 
 Matrix::Matrix(uint n)
-    : _n(0), _data(NULL)
+    : _pinnedMem(false), _n(0), _data(NULL)
 {
     allocate(n);
 }
@@ -22,7 +22,7 @@ Matrix::~Matrix()
 }
 
 Matrix::Matrix(const Matrix &m)
-    : _n(0), _data(NULL)
+    : _pinnedMem(false), _n(0), _data(NULL)
 {
     copy(m);
 }
@@ -102,7 +102,10 @@ void Matrix::printRow(uint i) const
 
 void Matrix::clear()
 {
-    delete []_data;
+    if (_pinnedMem)
+        magma_free_pinned(_data);
+    else
+        delete []_data;
 }
 
 void Matrix::setAlglibArray(const alglib::real_2d_array &array)
@@ -195,9 +198,11 @@ void Matrix::allocate(uint n)
                 std::cout << "ERROR magma_smalloc_pinned " << size() << std::endl;
                 exit(0);
             }
+            _pinnedMem = true;
         }
         else {
             _data = new ValueType[size()];
+            _pinnedMem = false;
         }
     }
 }

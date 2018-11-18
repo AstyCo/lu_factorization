@@ -54,7 +54,7 @@ static ListUint matrix_sizes()
 {
     ListUint sizes;
     uint last_size = read_value();
-    for (uint i = last_size; i <40000; i *= 1.2)
+    for (uint i = last_size; i <40000; i = i * 1.2)
         sizes.push_back(i);
     return sizes;
 }
@@ -68,13 +68,13 @@ static void eval_on_size(uint N)
     magma_int_t ipiv[N];
     magma_int_t info;
 
-    cmd_args.ngpu = 1;
-    Matrix::pinned_allocation = 0;
     write_value(N);
 
     for (Matrix matrix_N_x_N(N);;) {
         bool no_error_flag = true;
 
+        cmd_args.ngpu = 1;
+        Matrix::pinned_allocation = 0;
         matrix_N_x_N.rndNondegenirate();
 
         for (int iter = 0; iter < cmd_args.iter_count; ++iter) {

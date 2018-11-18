@@ -71,16 +71,16 @@ public:
         _cpu_start = clock();
         _wstart = magma_sync_wtime ( NULL );
 
-        HANDLE_ERROR(cudaEventCreate(&_cudaStart));
-        HANDLE_ERROR(cudaEventCreate(&_cudaStop));
+//        HANDLE_ERROR(cudaEventCreate(&_cudaStart));
+//        HANDLE_ERROR(cudaEventCreate(&_cudaStop));
 
-        HANDLE_ERROR(cudaEventRecord(_cudaStart, 0));
+//        HANDLE_ERROR(cudaEventRecord(_cudaStart, 0));
     }
 
     void clear()
     {
-        HANDLE_ERROR(cudaEventDestroy(_cudaStart));
-        HANDLE_ERROR(cudaEventDestroy(_cudaStop));
+//        HANDLE_ERROR(cudaEventDestroy(_cudaStart));
+//        HANDLE_ERROR(cudaEventDestroy(_cudaStop));
 
         _started = false;
     }
@@ -92,11 +92,11 @@ public:
         _cpu_elapsed = (clock() - _cpu_start) / CLOCKS_PER_SEC;
         _wall_clock_elapsed = magma_sync_wtime ( NULL ) - _wstart;
 
-        HANDLE_ERROR(cudaEventRecord(_cudaStop, 0));
-        HANDLE_ERROR(cudaEventSynchronize (_cudaStop) );
+//        HANDLE_ERROR(cudaEventRecord(_cudaStop, 0));
+//        HANDLE_ERROR(cudaEventSynchronize (_cudaStop) );
 
-        HANDLE_ERROR(cudaEventElapsedTime(&_gpu_elapsed_ms,
-                                          _cudaStart, _cudaStop) );
+//        HANDLE_ERROR(cudaEventElapsedTime(&_gpu_elapsed_ms,
+//                                          _cudaStart, _cudaStop) );
         clear();
     }
 

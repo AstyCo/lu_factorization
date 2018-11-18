@@ -54,6 +54,7 @@ private:
     void zero(); // обнуляет матрицу
     void copy(const Matrix &m); // копирование матрицы
 
+    bool _pinnedMem;
     uint _n; // число строк/столбцов
     ValueType *_data; // матрица в виде массива ROW-MAJOR (magma работает с COLUMN-MAJOR)
 
