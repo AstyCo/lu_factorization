@@ -78,7 +78,10 @@ static void eval_on_size(uint N)
         matrix_N_x_N.rndNondegenirate();
 
         for (int iter = 0; iter < cmd_args.iter_count; ++iter) {
-            if (iter >= cmd_args.pinned_iter_count) {
+            if (iter >= cmd_args.one_gpu_iter_count) {
+                cmd_args.ngpu = 2;
+            }
+            if ((iter % cmd_args.one_gpu_iter_count) >= cmd_args.pinned_iter_count) {
                 Matrix::pinned_allocation = 1;
             }
             Matrix matrix = matrix_N_x_N;
