@@ -53,8 +53,11 @@ static uint read_value()
 static ListUint matrix_sizes()
 {
     ListUint sizes;
+    const uint max_size = 40000;
     uint last_size = read_value();
-    for (uint i = last_size; i <40000; i = i * 1.2)
+    if (last_size * 1.2 >= max_size)
+        last_size = 1000;
+    for (uint i = last_size; i < max_size; i = i * 1.2)
         sizes.push_back(i);
     return sizes;
 }
@@ -81,9 +84,10 @@ static void eval_on_size(uint N)
             if (iter >= cmd_args.one_gpu_iter_count) {
                 cmd_args.ngpu = 2;
             }
-            if ((iter % cmd_args.one_gpu_iter_count) >= cmd_args.pinned_iter_count) {
+            if ((iter % cmd_args.one_gpu_iter_count) >= cmd_args.pinned_iter_count)
                 Matrix::pinned_allocation = 1;
-            }
+            else
+                Matrix::pinned_allocation = 0;
             Matrix matrix = matrix_N_x_N;
             if (cmd_args.test)
                 matrix.transpose();

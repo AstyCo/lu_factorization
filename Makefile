@@ -14,7 +14,10 @@ clean:
 	rm -rf *.o
 	
 submit:
-	mpisubmit.pl -n 1 -w 00:30 -g $(EXECUTABLE) $(ARGUMENTS)
+	mpisubmit.pl -p 1 -w 00:30 -g ./$(EXECUTABLE) $(ARGUMENTS)
+
+bsub:
+	bsub <bsub_args
 	
 run:
 	$(EXECUTABLE) $(ARGUMENTS)
